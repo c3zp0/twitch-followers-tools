@@ -1,9 +1,12 @@
-const { findByEmail, createUser } = require('../user/user.service');
+const { findByLogin, createUser } = require('../user/user.service');
 const jwt = require('jsonwebtoken');
 
 const signIn = async (req, res) => {
-    const email = req.body.email;
-    const user = await findByEmail(email);
+    const login = req.body.login;
+    if (!login) {
+        throw new Error('Send Login');
+    }
+    const user = await findByLogin(login);
     if (!user) {
         throw Error('User not found');
     }
@@ -21,12 +24,15 @@ const signIn = async (req, res) => {
 };
 
 const signUp = async (req, res) => {
-    const email = req.body.email;
-    const isUserExists = await findByEmail(email);
+    const login = req.body.login;
+    if (!login) {
+        throw new Error('Send Login');
+    }
+    const isUserExists = await findByLogin(login);
     if (isUserExists) {
         throw new Error('User already exists');
     }
-    const user = await createUser(email);
+    const user = await createUser(login);
     const token = jwt.sign(
         {
             id: user.id,

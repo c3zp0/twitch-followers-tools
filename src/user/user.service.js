@@ -1,12 +1,12 @@
 const SQL = require('sql-template-strings');
 const { pool } = require('../common/db');
 
-const findByEmail = async email => {
-    const stmt = await pool.query(SQL`select u.id, u.email from users u where u.email = ${email};`);
+const findByLogin = async login => {
+    const stmt = await pool.query(SQL`select u.id, u.login from users u where u.login = ${login};`);
     if (stmt.rowCount) {
         const user = {
             id: stmt.rows[0].id,
-            email: stmt.rows[0].email,
+            login: stmt.rows[0].login,
         };
         return user;
     }
@@ -14,24 +14,24 @@ const findByEmail = async email => {
 };
 
 const findById = async id => {
-    const stmt = await pool.query(SQL`select u.id, u.email from users u where u.id = ${id};`);
+    const stmt = await pool.query(SQL`select u.id, u.login from users u where u.id = ${id};`);
     if (stmt.rowCount) {
         const user = {
             id: stmt.rows[0].id,
-            email: stmt.rows[0].email,
+            login: stmt.rows[0].login,
         };
         return user;
     }
     return null;
 };
 
-const createUser = async email => {
-    const query = SQL`insert into users(email) values (${email}) returning id;`;
+const createUser = async login => {
+    const query = SQL`insert into users(login) values (${login}) returning id;`;
     const stmt = await pool.query(query);
     if (stmt.rowCount) {
         const user = {
             id: stmt.rows[0].id,
-            email,
+            login,
         };
         return user;
     }
@@ -42,6 +42,7 @@ const getFollowers = async userId => {
         select 
           f.id, 
           f.name, 
+          f.status,
           f.streamer_id, 
           f.last_follow_created_at,
           f.last_unfollow_created_at
@@ -52,6 +53,7 @@ const getFollowers = async userId => {
         return stmt.rows.map(_row => ({
             id: _row.id,
             followerName: _row.name,
+            status: _row.status,
             streamerId: _row.streamer_id,
             lastFollowCreatedAt: _row.last_follow_created_at,
             lastUnfollowCreatedAt: _row.last_unfollow_created_at,
@@ -80,18 +82,21 @@ const updateFollowers = async (userId, actualFollowers) => {
             storedFollowersMap.set(_follower.followerName, _follower);
         }
         if (!isUserStillFollower) {
+            _follower.status = 'unfollow';
             unfollowed.push(_follower);
         }
     });
     actualFollowers.forEach(_follower => {
         const isFollowerExists = storedFollowersMap.get(_follower.followerName);
         if (!isFollowerExists) {
+            _follower.status = 'follow';
             newFollowers.push(_follower);
         }
         if (isFollowerExists && _follower.lastFollowCreatedAt !== null) {
             const lastUnfollowDate = new Date(_follower.lastUnfollowCreatedAt);
             const lastFollowDate = new Date(_follower.lastFollowCreatedAt);
             if (lastFollowDate.getTime() < lastUnfollowDate.getTime()) {
+                _follower.status = 'refollow';
                 refollowed.push(_follower);
             }
         }
@@ -109,21 +114,21 @@ const updateFollowers = async (userId, actualFollowers) => {
 };
 
 const addFollowers = async (userId, followers) => {
-    const query = SQL`insert into followers (streamer_id, name, last_follow_created_at) values `;
+    const query = SQL`insert into followers (streamer_id, name, status, last_follow_created_at) values `;
 
     followers.forEach((_follower, index) => {
         if (index < followers.length - 1) {
             query.append(
-                SQL`(${userId}, ${_follower.followerName}, ${_follower.lastFollowCreatedAt}), `,
+                SQL`(${userId}, ${_follower.followerName}, ${_follower.status}, ${_follower.lastFollowCreatedAt}), `,
             );
         }
     });
 
     const i = followers.length - 1;
+    const last = followers[i];
     query.append(
-        SQL`(${userId}, ${followers[i].followerName}, ${followers[i].lastFollowCreatedAt} ) returning id;`,
+        SQL`(${userId}, ${last.followerName}, ${last.status}, ${last.lastFollowCreatedAt} ) returning id;`,
     );
-    console.log(query.text);
     const stmt = await pool.query(query);
     if (stmt.rowCount) {
         return true;
@@ -132,7 +137,14 @@ const addFollowers = async (userId, followers) => {
 };
 
 const updateUnfollowed = async (userId, followers) => {
-    const query = SQL`update followers set last_unfollow_created_at = ${new Date().toISOString()} where streamer_id = ${userId} and name in (`;
+    const query = SQL`
+    update followers 
+    set 
+        last_unfollow_created_at = ${new Date().toISOString()}, 
+        status = 'unfollow' 
+    where 
+        streamer_id = ${userId} 
+        and name in (`;
 
     followers.forEach(_follower => {
         query.append(SQL`${_follower.followerName}, `);
@@ -148,7 +160,14 @@ const updateUnfollowed = async (userId, followers) => {
 };
 
 const updateRefollowed = async (userId, followers) => {
-    const query = SQL`update followers set last_follow_created_at = ${new Date().toISOString()} where streamer_id = ${userId} and name in (`;
+    const query = SQL`
+    update followers 
+    set 
+        last_follow_created_at = ${new Date().toISOString()},
+        status = 'refollow' 
+    where 
+        streamer_id = ${userId} 
+        and name in (`;
 
     followers.forEach(_follower => {
         query.append(SQL`${_follower.followerName}, `);
@@ -163,4 +182,4 @@ const updateRefollowed = async (userId, followers) => {
     return false;
 };
 
-module.exports = { findByEmail, createUser, findById, getFollowers, updateFollowers };
+module.exports = { findByLogin, createUser, findById, getFollowers, updateFollowers };

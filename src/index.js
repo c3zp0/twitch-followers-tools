@@ -10,6 +10,9 @@ app.use(express.json());
 
 app.use(authRouter);
 app.use(usersRouter);
+app.use((error, req, res, next) => {
+    res.status(500).json({ message: error.message });
+});
 
 app.listen(process.env.APP_PORT, async () => {
     await db.pool.connect();
