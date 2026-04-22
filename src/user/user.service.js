@@ -81,7 +81,7 @@ const updateFollowers = async (userId, actualFollowers) => {
         if (!isFollowerInMap) {
             storedFollowersMap.set(_follower.followerName, _follower);
         }
-        if (!isUserStillFollower) {
+        if (!isUserStillFollower && isUserStillFollower.status === 'follow') {
             _follower.status = 'unfollow';
             unfollowed.push(_follower);
         }
