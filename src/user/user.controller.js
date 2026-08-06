@@ -13,8 +13,9 @@ const updateFollowers = async (req, res) => {
     const followers = csv.map(row => {
         const columns = row.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/);
         return {
+            twitchId: Number(columns[1]),
             followerName: columns[0],
-            lastFollowCreatedAt: columns[3],
+            followCreatedAt: columns[3],
         };
     });
     const updates = await userService.updateFollowers(userId, followers);
