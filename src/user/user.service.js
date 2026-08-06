@@ -100,10 +100,12 @@ const updateFollowers = async (userId, actualFollowers) => {
             _follower.status = 'refollow';
             refollowed.push(_follower);
         }
-        const followerName = isFollowerExists.followerName.split(',')[0].trim();
-        if (isFollowerExists && _follower.followerName !== followerName) {
-            _follower.followerName += `, ${isFollowerExists.followerName}`;
-            newNames.push(_follower);
+        if (isFollowerExists) {
+            const followerName = isFollowerExists.followerName.split(',')[0].trim();
+            if (_follower.followerName !== followerName) {
+                _follower.followerName += `, ${isFollowerExists.followerName}`;
+                newNames.push(_follower);
+            }
         }
     });
     if (newFollowers.length) {
@@ -122,6 +124,7 @@ const updateFollowers = async (userId, actualFollowers) => {
 };
 
 const addFollowers = async (userId, followers) => {
+    console.log('add followers');
     const query = SQL`insert into followers (streamer_id, twitch_id, name, status, last_follow_created_at) values `;
 
     followers.forEach((_follower, index) => {
