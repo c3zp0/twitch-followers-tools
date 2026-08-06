@@ -130,7 +130,7 @@ const addFollowers = async (userId, followers) => {
     followers.forEach((_follower, index) => {
         if (index < followers.length - 1) {
             query.append(
-                SQL`(${userId}, ${_follower.twitchId}, ${_follower.followerName}, ${_follower.status}, ${_follower.lastFollowCreatedAt}), `,
+                SQL`(${userId}, ${_follower.twitchId}, ${_follower.followerName}, ${_follower.status}, ${_follower.followCreatedAt}), `,
             );
         }
     });
@@ -138,7 +138,7 @@ const addFollowers = async (userId, followers) => {
     const i = followers.length - 1;
     const last = followers[i];
     query.append(
-        SQL`(${userId}, ${last.twitchId}, ${last.followerName}, ${last.status}, ${last.lastFollowCreatedAt} ) returning id;`,
+        SQL`(${userId}, ${last.twitchId}, ${last.followerName}, ${last.status}, ${last.followCreatedAt} ) returning id;`,
     );
     const stmt = await pool.query(query);
     if (stmt.rowCount) {
